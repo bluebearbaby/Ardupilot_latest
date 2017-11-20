@@ -386,7 +386,7 @@ void AC_WPNav::wp_and_spline_init()
 {
     // check _wp_accel_cms is reasonable
     if (_wp_accel_cms <= 0) {
-        _wp_accel_cms.set_and_save(WPNAV_ACCELERATION);
+        _wp_accel_cms.set_and_save(WPNAV_ACCELERATION);//1
     }
 
     // also limit the accel using the maximum lean angle. This
@@ -404,7 +404,7 @@ void AC_WPNav::wp_and_spline_init()
     // initialise position controller speed and acceleration
     _pos_control.set_speed_xy(_wp_speed_cms);
     _pos_control.set_accel_xy(_wp_accel_cms);
-    _pos_control.set_jerk_xy_to_default();
+    _pos_control.set_jerk_xy_to_default();//1700 m/s/s/s
     _pos_control.set_speed_z(-_wp_speed_down_cms, _wp_speed_up_cms);
     _pos_control.set_accel_z(_wp_accel_z_cms);
     _pos_control.calc_leash_length_xy();
@@ -585,7 +585,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // calculate 3d vector from segment's origin
     Vector3f curr_delta = (curr_pos - Vector3f(0,0,terr_offset)) - _origin;
 
-    // calculate how far along the track we are
+    // calculate how far along the track we are//不是用距离公式吗？？
     track_covered = curr_delta.x * _pos_delta_unit.x + curr_delta.y * _pos_delta_unit.y + curr_delta.z * _pos_delta_unit.z;
 
     // calculate the point closest to the vehicle on the segment from origin to destination
@@ -594,7 +594,7 @@ bool AC_WPNav::advance_wp_target_along_track(float dt)
     // calculate the distance vector from the vehicle to the closest point on the segment from origin to destination
     track_error = curr_delta - track_covered_pos;
 
-    // calculate the horizontal error
+    // calculate the horizontal error  //根号下x平方+y平方
     float track_error_xy = norm(track_error.x, track_error.y);
 
     // calculate the vertical error
@@ -766,7 +766,7 @@ bool AC_WPNav::update_wpnav()
             _pos_control.freeze_ff_xy();
         }
         _pos_control.freeze_ff_z();
-
+        //没管z方向
         _pos_control.update_xy_controller(AC_PosControl::XY_MODE_POS_ONLY, 1.0f, false);
         check_wp_leash_length();
 
@@ -787,6 +787,7 @@ void AC_WPNav::check_wp_leash_length()
 }
 
 /// calculate_wp_leash_length - calculates horizontal and vertical leash lengths for waypoint controller
+// 得出_track_accel 和_track_speed 和 _track_leash_length 和 _slow_down_dist
 void AC_WPNav::calculate_wp_leash_length()
 {
     // length of the unit direction vector in the horizontal

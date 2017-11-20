@@ -47,9 +47,9 @@ AC_PosControl::AC_PosControl(const AP_AHRS_View& ahrs, const AP_InertialNav& ina
     _accel_last_z_cms(0.0f),
     _accel_cms(POSCONTROL_ACCEL_XY),
     _jerk_cmsss(POSCONTROL_JERK_LIMIT_CMSSS),
-    _leash(POSCONTROL_LEASH_LENGTH_MIN),
+    _leash(POSCONTROL_LEASH_LENGTH_MIN),//100
     _leash_down_z(POSCONTROL_LEASH_LENGTH_MIN),
-    _leash_up_z(POSCONTROL_LEASH_LENGTH_MIN),
+    _leash_up_z(POSCONTROL_LEASH_LENGTH_MIN),//100
     _roll_target(0.0f),
     _pitch_target(0.0f),
     _distance_to_target(0.0f),
@@ -113,7 +113,7 @@ void AC_PosControl::set_speed_z(float speed_down, float speed_up)
         _speed_down_cms = speed_down;
         _speed_up_cms = speed_up;
         _flags.recalc_leash_z = true;
-        calc_leash_length_z();
+        calc_leash_length_z();//一次的target不能加减太多，需要有个限制，此即是计算限制。
     }
 }
 
@@ -123,7 +123,7 @@ void AC_PosControl::set_accel_z(float accel_cmss)
     if (fabsf(_accel_z_cms-accel_cmss) > 1.0f) {
         _accel_z_cms = accel_cmss;
         _flags.recalc_leash_z = true;
-        calc_leash_length_z();
+        calc_leash_length_z();//
     }
 }
 
@@ -180,25 +180,25 @@ void AC_PosControl::set_alt_target_from_climb_rate_ff(float climb_rate_cms, floa
 {
     // calculated increased maximum acceleration if over speed
     float accel_z_cms = _accel_z_cms;
-    if (_vel_desired.z < _speed_down_cms && !is_zero(_speed_down_cms)) {
-        accel_z_cms *= POSCONTROL_OVERSPEED_GAIN_Z * _vel_desired.z / _speed_down_cms;
+    if (_vel_desired.z < _speed_down_cms && !is_zero(_speed_down_cms)) {//_speed_down_cms是负数吧？？
+        accel_z_cms *= POSCONTROL_OVERSPEED_GAIN_Z * _vel_desired.z / _speed_down_cms;//2* ？？
     }
-    if (_vel_desired.z > _speed_up_cms && !is_zero(_speed_up_cms)) {
+    if (_vel_desired.z > _speed_up_cms && !is_zero(_speed_up_cms)) {//看起来把加速度放大了点
         accel_z_cms *= POSCONTROL_OVERSPEED_GAIN_Z * _vel_desired.z / _speed_up_cms;
     }
-    accel_z_cms = constrain_float(accel_z_cms, 0.0f, 750.0f);
+    accel_z_cms = constrain_float(accel_z_cms, 0.0f, 750.0f);//然后再给限幅
 
     // jerk_z is calculated to reach full acceleration in 1000ms.
-    float jerk_z = accel_z_cms * POSCONTROL_JERK_RATIO;
+    float jerk_z = accel_z_cms * POSCONTROL_JERK_RATIO;//1
 
-    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f*fabsf(_vel_desired.z - climb_rate_cms)*jerk_z));
+    float accel_z_max = MIN(accel_z_cms, safe_sqrt(2.0f*fabsf(_vel_desired.z - climb_rate_cms)*jerk_z));//这不一定是0嘛
 
     _accel_last_z_cms += jerk_z * dt;
-    _accel_last_z_cms = MIN(accel_z_max, _accel_last_z_cms);
+    _accel_last_z_cms = MIN(accel_z_max, _accel_last_z_cms);//为啥整这么麻烦？？
 
     float vel_change_limit = _accel_last_z_cms * dt;
     _vel_desired.z = constrain_float(climb_rate_cms, _vel_desired.z-vel_change_limit, _vel_desired.z+vel_change_limit);
-    _flags.use_desvel_ff_z = true;
+    _flags.use_desvel_ff_z = true;//这个不在这用还在哪里用？ pos_to_rate_z函数里用的。
 
     // adjust desired alt if motors have not hit their limits
     // To-Do: add check of _limit.pos_down?
@@ -255,7 +255,7 @@ void AC_PosControl::set_target_to_stopping_point_z()
 
     get_stopping_point_z(_pos_target);
 }
-
+//一般是航线末段，自动航线飞行、rtl结束后设置。
 /// get_stopping_point_z - calculates stopping point based on current position, velocity, vehicle acceleration
 void AC_PosControl::get_stopping_point_z(Vector3f& stopping_point) const
 {
@@ -324,7 +324,7 @@ void AC_PosControl::update_z_controller()
 {
     // check time since last cast
     uint32_t now = AP_HAL::millis();
-    if (now - _last_update_z_ms > POSCONTROL_ACTIVE_TIMEOUT_MS) {
+    if (now - _last_update_z_ms > POSCONTROL_ACTIVE_TIMEOUT_MS) {//0.2s
         _flags.reset_rate_to_accel_z = true;
         _flags.reset_accel_to_throttle = true;
     }
@@ -342,6 +342,7 @@ void AC_PosControl::update_z_controller()
 
 /// calc_leash_length - calculates the vertical leash lengths from maximum speed, acceleration
 ///     called by pos_to_rate_z if z-axis speed or accelerations are changed
+// 得到了 _leash_up_z 和 _leash_down_z
 void AC_PosControl::calc_leash_length_z()
 {
     if (_flags.recalc_leash_z) {
@@ -375,7 +376,7 @@ void AC_PosControl::pos_to_rate_z()
         _pos_target.z = curr_alt - _leash_down_z;
         _pos_error.z = -_leash_down_z;
         _limit.pos_down = true;
-    }
+    }//咔咔的限幅
 
     // calculate _vel_target.z using from _pos_error.z using sqrt controller
     _vel_target.z = AC_AttitudeControl::sqrt_controller(_pos_error.z, _p_pos_z.kP(), _accel_z_cms);
@@ -391,10 +392,10 @@ void AC_PosControl::pos_to_rate_z()
     if (_vel_target.z > _speed_up_cms) {
         _vel_target.z = _speed_up_cms;
         _limit.vel_up = true;
-    }
+    }//咔咔的限幅
 
     // add feed forward component
-    if (_flags.use_desvel_ff_z) {
+    if (_flags.use_desvel_ff_z) {//好吧，这里用了
         _vel_target.z += _vel_desired.z;
     }
 
@@ -437,14 +438,14 @@ void AC_PosControl::rate_to_accel_z()
         _flags.reset_rate_to_accel_z = false;
     } else {
         // calculate rate error and filter with cut off frequency of 2 Hz
-        _vel_error.z = _vel_error_filter.apply(_vel_target.z - curr_vel.z, _dt);
+        _vel_error.z = _vel_error_filter.apply(_vel_target.z - curr_vel.z, _dt);//滤波
     }
 
     // calculate p
-    p = _p_vel_z.kP() * _vel_error.z;
+    p = _p_vel_z.kP() * _vel_error.z;//p控制器
 
     // consolidate and constrain target acceleration
-    _accel_target.z = _accel_feedforward.z + p;
+    _accel_target.z = _accel_feedforward.z + p;//前馈加P控制器
 
     // set target for accel based throttle controller
     accel_to_throttle(_accel_target.z);
@@ -467,7 +468,7 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
         _flags.reset_accel_to_throttle = false;
     } else {
         // calculate accel error
-        _accel_error.z = accel_target_z - z_accel_meas;
+        _accel_error.z = accel_target_z - z_accel_meas;//计算误差
     }
 
     // set input to PID
@@ -478,7 +479,7 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
     p = _pid_accel_z.get_p();
 
     // get i term
-    i = _pid_accel_z.get_integrator();
+    i = _pid_accel_z.get_integrator();//，还没有计算积分呐，不应该是get_i嘛？所以这里用的是上一次的积分值！
 
     // ensure imax is always large enough to overpower hover throttle
     if (_motors.get_throttle_hover() * 1000.0f > _pid_accel_z.imax()) {
@@ -488,7 +489,7 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
     // update i term as long as we haven't breached the limits or the I term will certainly reduce
     // To-Do: should this be replaced with limits check from attitude_controller?
     if ((!_motors.limit.throttle_lower && !_motors.limit.throttle_upper) || (i>0&&_accel_error.z<0) || (i<0&&_accel_error.z>0)) {
-        i = _pid_accel_z.get_i();
+        i = _pid_accel_z.get_i();//在这里积分的！！
     }
 
     // get d term
@@ -498,7 +499,7 @@ void AC_PosControl::accel_to_throttle(float accel_target_z)
 
     // send throttle to attitude controller with angle boost
     _attitude_control.set_throttle_out(thr_out, true, POSCONTROL_THROTTLE_CUTOFF_FREQ);
-}
+}//OK，高度方向上的到此告一段落，把输出给了总油门。
 
 ///
 /// position controller
@@ -763,7 +764,7 @@ void AC_PosControl::update_vel_controller_xyz(float ekfNavVelGainScaler)
     }
 
     // update altitude target
-    set_alt_target_from_climb_rate_ff(_vel_desired.z, _dt, false);
+    set_alt_target_from_climb_rate_ff(_vel_desired.z, _dt, false);//这里计算出来的还是：_vel_desired.z，因为输出参数是它本身。
 
     // run z-axis position controller
     update_z_controller();
@@ -1017,12 +1018,12 @@ float AC_PosControl::calc_leash_length(float speed_cms, float accel_cms, float k
 
     // sanity check acceleration and avoid divide by zero
     if (accel_cms <= 0.0f) {
-        accel_cms = POSCONTROL_ACCELERATION_MIN;
+        accel_cms = POSCONTROL_ACCELERATION_MIN;//50
     }
 
     // avoid divide by zero
     if (kP <= 0.0f) {
-        return POSCONTROL_LEASH_LENGTH_MIN;
+        return POSCONTROL_LEASH_LENGTH_MIN;//100
     }
 
     // calculate leash length
@@ -1036,7 +1037,7 @@ float AC_PosControl::calc_leash_length(float speed_cms, float accel_cms, float k
 
     // ensure leash is at least 1m long
     if( leash_length < POSCONTROL_LEASH_LENGTH_MIN ) {
-        leash_length = POSCONTROL_LEASH_LENGTH_MIN;
+        leash_length = POSCONTROL_LEASH_LENGTH_MIN;//100
     }
 
     return leash_length;
@@ -1069,7 +1070,7 @@ void AC_PosControl::init_ekf_z_reset()
 }
 
 /// check for ekf position reset and adjust loiter or brake target position
-void AC_PosControl::check_for_ekf_z_reset()
+void AC_PosControl::check_for_ekf_z_reset()//什么意思？？
 {
     // check for position shift
     float alt_shift;

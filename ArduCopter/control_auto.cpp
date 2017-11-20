@@ -24,6 +24,7 @@ bool Copter::auto_init(bool ignore_checks)
         auto_mode = Auto_Loiter;
 
         // reject switching to auto mode if landed with motors armed but first command is not a takeoff (reduce chance of flips)
+        // 刚降落后电机还未上锁，不允许切换到自动模式。
         if (motors->armed() && ap.land_complete && !mission.starts_with_takeoff_cmd()) {
             gcs().send_text(MAV_SEVERITY_CRITICAL, "Auto: Missing Takeoff Cmd");
             return false;
