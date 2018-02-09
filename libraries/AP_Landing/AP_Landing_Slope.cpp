@@ -47,7 +47,8 @@ void AP_Landing::type_slope_verify_abort_landing(const Location &prev_WP_loc, Lo
   final flare
  */
 bool AP_Landing::type_slope_verify_land(const Location &prev_WP_loc, Location &next_WP_loc, const Location &current_loc,
-        const float height, const float sink_rate, const float wp_proportion, const uint32_t last_flying_ms, const bool is_armed, const bool is_flying, const bool rangefinder_state_in_range)
+        const float height, const float sink_rate, const float wp_proportion, const uint32_t last_flying_ms, const bool is_armed,
+         const bool is_flying, const bool rangefinder_state_in_range)
 {
     // we don't 'verify' landing in the sense that it never completes,
     // so we don't verify command completion. Instead we use this to
@@ -58,7 +59,7 @@ bool AP_Landing::type_slope_verify_land(const Location &prev_WP_loc, Location &n
         const bool heading_lined_up = abs(nav_controller->bearing_error_cd()) < 1000 && !nav_controller->data_is_stale();
         const bool on_flight_line = fabsf(nav_controller->crosstrack_error()) < 5.0f && !nav_controller->data_is_stale();
         const bool below_prev_WP = current_loc.alt < prev_WP_loc.alt;
-        if ((mission.get_prev_nav_cmd_id() == MAV_CMD_NAV_LOITER_TO_ALT) ||
+        if ((mission.get_prev_nav_cmd_id() == MAV_CMD_NAV_LOITER_TO_ALT) ||//上一个航点是下降高度
             (wp_proportion >= 0 && heading_lined_up && on_flight_line) ||
             (wp_proportion > 0.15f && heading_lined_up && below_prev_WP) ||
             (wp_proportion > 0.5f)) {
@@ -157,7 +158,9 @@ bool AP_Landing::type_slope_verify_land(const Location &prev_WP_loc, Location &n
     return false;
 }
 
-void AP_Landing::type_slope_adjust_landing_slope_for_rangefinder_bump(AP_Vehicle::FixedWing::Rangefinder_State &rangefinder_state, Location &prev_WP_loc, Location &next_WP_loc, const Location &current_loc, const float wp_distance, int32_t &target_altitude_offset_cm)
+void AP_Landing::type_slope_adjust_landing_slope_for_rangefinder_bump(AP_Vehicle::FixedWing::Rangefinder_State &rangefinder_state, 
+        Location &prev_WP_loc, Location &next_WP_loc, const Location &current_loc, const float wp_distance, 
+        int32_t &target_altitude_offset_cm)
 {
     // check the rangefinder correction for a large change. When found, recalculate the glide slope. This is done by
     // determining the slope from your current location to the land point then following that back up to the approach
@@ -269,8 +272,8 @@ void AP_Landing::type_slope_setup_landing_glide_slope(const Location &prev_WP_lo
     }
 
 
-    // time before landing that we will flare
-    float flare_time = aim_height / SpdHgt_Controller->get_land_sinkrate();
+    // time before landing that we will flare //AP_GROUPINFO("LAND_SINK", 17, AP_TECS, _land_sink, 0.25f),
+    float flare_time = aim_height / SpdHgt_Controller->get_land_sinkrate();//0.25m/s
 
     // distance to flare is based on ground speed, adjusted as we
     // get closer. This takes into account the wind

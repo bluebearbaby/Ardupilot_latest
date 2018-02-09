@@ -1,6 +1,7 @@
 #include "Plane.h"
 
-const AP_Param::GroupInfo QuadPlane::var_info[] = {
+const AP_Param::GroupInfo QuadPlane::var_info[] =
+{
 
     // @Param: ENABLE
     // @DisplayName: Enable QuadPlane
@@ -443,7 +444,7 @@ void QuadPlane::setup_default_channels(uint8_t num_motors)
         SRV_Channels::set_aux_channel_default((SRV_Channel::Aux_servo_function_t)(SRV_Channel::k_motor1+i), CH_5+i);
     }
 }
-    
+
 
 bool QuadPlane::setup(void)
 {
@@ -932,7 +933,7 @@ void QuadPlane::control_loiter()
 
 
     if (should_relax()) {
-        wp_nav->loiter_soften_for_landing();
+        wp_nav->loiter_soften_for_landing();//什么意思？？
     }
 
     if (millis() - last_loiter_ms > 500) {
@@ -1253,7 +1254,7 @@ void QuadPlane::update_transition(void)
         hold_hover(assist_climb_rate_cms());
         run_rate_controller();
         motors_output();
-        last_throttle = motors->get_throttle();
+        last_throttle = motors->get_throttle();//这是MC还是FW的油门？
 
         // reset integrators while we are below target airspeed as we
         // may build up too much while still primarily under
@@ -1275,6 +1276,7 @@ void QuadPlane::update_transition(void)
             gcs().send_text(MAV_SEVERITY_INFO, "Transition done");
         }
         float trans_time_ms = (float)transition_time_ms.get();
+        //transition_scale从1到0变化
         float transition_scale = (trans_time_ms - (millis() - transition_start_ms)) / trans_time_ms;
         float throttle_scaled = last_throttle * transition_scale;
 

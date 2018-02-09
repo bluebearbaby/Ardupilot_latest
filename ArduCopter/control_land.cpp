@@ -184,7 +184,7 @@ void Copter::land_run_vertical_control(bool pause_descent)
         if (g.land_speed_high > 0) {
             max_land_descent_velocity = -g.land_speed_high;
         } else {
-            max_land_descent_velocity = pos_control->get_speed_down();
+            max_land_descent_velocity = pos_control->get_speed_down();//-1.5
         }
 
         // Don't speed up for landing.
